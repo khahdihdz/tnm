@@ -1,30 +1,27 @@
-# Võ Lâm Web — TNM
+# TNM Sales Manager
 
-Game nhập vai võ hiệp 2D chạy trực tiếp trên trình duyệt, ưu tiên offline.
+WebApp quản lý bán hàng toàn diện, tối ưu cho GitHub Pages và sử dụng offline.
 
-## Công nghệ
-TypeScript, Vite, Canvas 2D, LocalStorage và PWA.
+## Chức năng
+- Dashboard doanh thu, lợi nhuận, tồn kho
+- POS bán hàng
+- Sản phẩm, khách hàng, nhà cung cấp
+- Đơn hàng và tồn kho
+- Nhập hàng, chi phí, công nợ
+- Báo cáo
+- Import/export CSV
+- Backup/restore JSON
+- PWA/offline
+- Responsive mobile/tablet/desktop
+- Dark mode
 
-## Chạy local
-npm install
-npm run dev
-
-## Build
-npm run build
+## Chạy
+Không cần Node.js hoặc npm. Mở `index.html` bằng web server tĩnh.
 
 ## GitHub Pages
-https://khahdihdz.github.io/tnm/
+Workflow trong `.github/workflows/pages.yml` triển khai trực tiếp thư mục gốc sau mỗi push vào `main`.
 
-Mỗi commit vào main sẽ build và deploy bằng GitHub Actions.
-
-## Điều khiển
-PC: WASD hoặc phím mũi tên; Space/J để đánh.
-Mobile: joystick và các nút hành động.
-
-## Asset
-Kiến trúc asset pipeline được chuẩn bị để tiếp nhận asset từ minhsang290775/vltkunity/client/Assets sau khi kiểm tra quyền tái phân phối. Không tải asset nguồn trực tiếp lúc runtime và không sao chép code Unity/Photon.
-
-## Trạng thái
-Bản nền playable hiện có di chuyển, combat, quái, EXP, level, Xu, hồi phục, save offline, joystick và PWA. Các hệ thống bản đồ/quest/inventory/skill/shop sẽ được mở rộng trên nền này.
+## Dữ liệu
+Dữ liệu demo được lưu trong LocalStorage trên trình duyệt. Có thể backup/restore trong Cài đặt.
 
 © 2026 khahdihdz
