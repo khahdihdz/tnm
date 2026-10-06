@@ -22,10 +22,10 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 public class MainActivity extends Activity {
-    LinearLayout root, content, nav; SharedPreferences sp; int blue=Color.rgb(37,99,235);
+    LinearLayout root, content, nav; SharedPreferences sp; int blue=Color.rgb(37,99,235); int ink=Color.rgb(15,23,42), muted=Color.rgb(100,116,139), surface=Color.WHITE, bgColor=Color.rgb(246,248,252), line=Color.rgb(226,232,240);
     ArrayList<Product> products=new ArrayList<>(); ArrayList<Sale> sales=new ArrayList<>(); ArrayList<Customer> customers=new ArrayList<>();
     NumberFormat money=NumberFormat.getCurrencyInstance(new Locale("vi","VN"));
-    final String APP_VERSION="1.0.0";
+    final String APP_VERSION=BuildConfig.VERSION_NAME;
     final String UPDATE_API="https://api.github.com/repos/khahdihdz/tnm/releases";
     final ExecutorService updateExecutor=Executors.newSingleThreadExecutor();
 
@@ -175,17 +175,18 @@ public class MainActivity extends Activity {
     void build(String page){
         root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(246,248,252));
+        root.setBackgroundColor(bgColor);
         applyInsets(root);
 
         LinearLayout bar=new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(sidePad(),dp(6),sidePad(),dp(6));
+        bar.setPadding(sidePad(),dp(8),sidePad(),dp(8));
+        bar.setBackgroundColor(surface);
 
         String title=page.equals("dashboard")?"Tổng quan":page.equals("sales")?"Bán hàng":
             page.equals("products")?"Sản phẩm":page.equals("customers")?"Khách hàng":
             page.equals("reports")?"Báo cáo":"Cài đặt";
-        TextView titleView=tv(title,compact()?21:24,Color.rgb(15,23,42));
+        TextView titleView=tv(title,compact()?21:23,ink);
         titleView.setSingleLine(true);
         titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
         titleView.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
@@ -209,20 +210,20 @@ public class MainActivity extends Activity {
             actionLp.setMargins(dp(6),0,0,0);
             bar.addView(add,actionLp);
         }
-        root.addView(bar,new LinearLayout.LayoutParams(-1,dp(66)));
+        root.addView(bar,new LinearLayout.LayoutParams(-1,dp(compact()?64:68)));
 
         ScrollView sv=new ScrollView(this);
         sv.setFillViewport(true);
         content=new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(sidePad(),dp(2),sidePad(),dp(18));
+        content.setPadding(sidePad(),dp(10),sidePad(),dp(20));
         sv.addView(content);
         root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));
 
         nav=new LinearLayout(this);
         nav.setGravity(Gravity.CENTER);
-        nav.setPadding(dp(4),dp(6),dp(4),dp(6));
-        nav.setBackgroundColor(Color.WHITE);
+        nav.setPadding(dp(6),dp(7),dp(6),dp(7));
+        nav.setBackgroundColor(surface);
         nav.setElevation(dp(8));
         addNav(com.khahdihdz.tnm.R.drawable.ic_home,"Tổng quan","dashboard",page.equals("dashboard"));
         addNav(com.khahdihdz.tnm.R.drawable.ic_cart,"Bán hàng","sales",page.equals("sales"));
@@ -256,16 +257,16 @@ public class MainActivity extends Activity {
         lp.setMargins(dp(2),0,dp(2),0);
         nav.addView(item,lp);
     }
-    TextView heading(String s){TextView t=tv(s,compact()?16:17,Color.rgb(20,32,50));t.setTypeface(null,1);t.setPadding(0,12,0,8);return t;}
+    TextView heading(String s){TextView t=tv(s,compact()?16:17,ink);t.setTypeface(null,1);t.setPadding(0,dp(14),0,dp(8));return t;}
     void card(LinearLayout p,String title,String value){
         LinearLayout c=new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setGravity(Gravity.CENTER_VERTICAL);
         c.setPadding(dp(compact()?14:16),dp(12),dp(compact()?14:16),dp(12));
-        c.setBackground(bg(Color.WHITE,20));
+        c.setBackground(bg(surface,18));
         c.setElevation(dp(1));
-        TextView a=tv(title,compact()?12:13,Color.rgb(100,116,139));
-        TextView v=tv(value,compact()?19:22,Color.rgb(15,23,42));
+        TextView a=tv(title,compact()?12:13,muted);
+        TextView v=tv(value,compact()?19:22,ink);
         v.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         v.setMaxLines(1);
         v.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -306,9 +307,9 @@ public class MainActivity extends Activity {
     void reports(){long rev=0;for(Sale s:sales)rev+=s.total;content.addView(heading("Báo cáo kinh doanh"));card(content,"Tổng doanh thu",V(rev));card(content,"Số đơn hàng",""+sales.size());long avg=sales.size()==0?0:rev/sales.size();card(content,"Giá trị đơn trung bình",V(avg));content.addView(heading("Ghi chú"));content.addView(tv("Dữ liệu bán hàng được lưu cục bộ trên thiết bị. Hãy sao lưu thường xuyên.",14,Color.GRAY));}
     void item(String a,String b,String c){
         LinearLayout x=new LinearLayout(this);x.setOrientation(LinearLayout.VERTICAL);
-        x.setPadding(dp(compact()?13:16),dp(12),dp(compact()?13:16),dp(12));x.setBackground(bg(Color.WHITE,18));
-        TextView title=tv(a,compact()?15:16,Color.rgb(25,35,50));title.setMaxLines(2);title.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        TextView sub=tv(b+"  •  "+c,compact()?12:13,Color.GRAY);sub.setMaxLines(2);sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        x.setPadding(dp(compact()?14:16),dp(13),dp(compact()?14:16),dp(13));x.setBackground(bg(surface,16));x.setElevation(dp(1));
+        TextView title=tv(a,compact()?15:16,ink);title.setMaxLines(2);title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView sub=tv(b+"  •  "+c,compact()?12:13,muted);sub.setMaxLines(2);sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
         x.addView(title);x.addView(sub);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,ViewGroup.LayoutParams.WRAP_CONTENT);lp.setMargins(0,0,0,8);content.addView(x,lp);}
     void addProduct(){final LinearLayout f=form();EditText code=e("Mã sản phẩm"),name=e("Tên sản phẩm"),price=e("Giá bán"),stock=e("Tồn kho");f.addView(code);f.addView(name);f.addView(price);f.addView(stock);dialog("Thêm sản phẩm",f,()->{products.add(new Product(code.getText().toString(),name.getText().toString(),num(price),num(stock)));save();build("products");});}
     void addCustomer(){LinearLayout f=form();EditText name=e("Tên khách hàng"),phone=e("Số điện thoại");f.addView(name);f.addView(phone);dialog("Thêm khách hàng",f,()->{customers.add(new Customer(name.getText().toString(),phone.getText().toString()));save();build("customers");});}
