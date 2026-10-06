@@ -304,7 +304,48 @@ public class MainActivity extends Activity {
         content.addView(heading("Tồn kho thấp"));for(Product p:products)if(p.stock<=5)item(p.name,"Còn "+p.stock+" sản phẩm","Cần nhập");
     }
     void sales(){content.addView(heading("Lịch sử bán hàng"));if(sales.size()==0)content.addView(tv("Chưa có đơn hàng.",15,Color.GRAY));for(int i=sales.size()-1;i>=0;i--)item("#"+(i+1)+" · "+sales.get(i).customer,V(sales.get(i).total),sales.get(i).payment);}
-    void products(){content.addView(heading("Danh sách sản phẩm"));for(Product p:products)item(p.name,p.code+" · "+V(p.price),p.category+" · "+p.unit+" · Tồn: "+p.stock+" · Tối thiểu "+p.minStock);}
+    void products(){
+        content.addView(heading("Danh sách sản phẩm"));
+        if(products.size()==0){content.addView(tv("Chưa có sản phẩm.",14,muted));return;}
+        for(int i=0;i<products.size();i++){
+            Product p=products.get(i);
+            productItem(p);
+        }
+    }
+    void productItem(Product p){
+        LinearLayout x=new LinearLayout(this);x.setOrientation(LinearLayout.VERTICAL);
+        x.setPadding(dp(compact()?14:16),dp(12),dp(compact()?14:16),dp(10));x.setBackground(bg(surface,16));x.setElevation(dp(1));
+        LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout info=new LinearLayout(this);info.setOrientation(LinearLayout.VERTICAL);
+        TextView title=tv(p.name,compact()?15:16,ink);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setMaxLines(1);title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView sub=tv(p.code+" · "+V(p.price)+" · Tồn "+p.stock+" "+p.unit,compact()?12:13,muted);sub.setMaxLines(2);sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        info.addView(title);info.addView(sub);top.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+        Button edit=btn("Sửa");edit.setTextColor(blue);edit.setBackground(bg(Color.rgb(239,246,255),12));
+        Button del=btn("Xóa");del.setTextColor(Color.rgb(220,38,38));del.setBackground(bg(Color.rgb(254,242,242),12));
+        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(54),dp(40));bp.setMargins(dp(5),0,0,0);top.addView(edit,bp);
+        LinearLayout.LayoutParams dpLp=new LinearLayout.LayoutParams(dp(54),dp(40));dpLp.setMargins(dp(5),0,0,0);top.addView(del,dpLp);
+        x.addView(top);
+        TextView detail=tv(p.category+" · "+p.unit+" · Giá nhập "+V(p.cost)+" · Tối thiểu "+p.minStock,compact()?11:12,muted);detail.setMaxLines(2);detail.setEllipsize(android.text.TextUtils.TruncateAt.END);detail.setPadding(0,dp(5),0,0);x.addView(detail);
+        edit.setOnClickListener(v->editProduct(p));
+        del.setOnClickListener(v->deleteProduct(p));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,ViewGroup.LayoutParams.WRAP_CONTENT);lp.setMargins(0,0,0,dp(8));content.addView(x,lp);
+    }
+    void editProduct(Product p){
+        LinearLayout f=form();
+        EditText code=e("Mã sản phẩm"),name=e("Tên sản phẩm"),price=e("Giá bán"),stock=e("Tồn kho"),cost=e("Giá nhập"),category=e("Danh mục"),unit=e("Đơn vị"),min=e("Tồn tối thiểu");
+        code.setText(p.code);name.setText(p.name);price.setText(""+p.price);stock.setText(""+p.stock);cost.setText(""+p.cost);category.setText(p.category);unit.setText(p.unit);min.setText(""+p.minStock);
+        f.addView(code);f.addView(name);f.addView(price);f.addView(stock);f.addView(cost);f.addView(category);f.addView(unit);f.addView(min);
+        dialog("Sửa sản phẩm",f,()->{
+            String newCode=code.getText().toString().trim(),newName=name.getText().toString().trim();
+            if(newCode.isEmpty()||newName.isEmpty()){toast("Mã và tên sản phẩm không được để trống");return;}
+            for(Product other:products)if(other!=p&&other.code.equalsIgnoreCase(newCode)){toast("Mã sản phẩm đã tồn tại");return;}
+            p.code=newCode;p.name=newName;p.price=num(price);p.stock=num(stock);p.cost=num(cost);p.category=category.getText().toString().trim().isEmpty()?"Khác":category.getText().toString().trim();p.unit=unit.getText().toString().trim().isEmpty()?"cái":unit.getText().toString().trim();p.minStock=num(min);save();build("products");toast("Đã cập nhật sản phẩm");
+        });
+    }
+    void deleteProduct(Product p){
+        new AlertDialog.Builder(this).setTitle("Xóa sản phẩm").setMessage("Bạn có chắc muốn xóa “"+p.name+"”?\n\nTồn kho hiện tại: "+p.stock+" "+p.unit+".")
+            .setNegativeButton("Hủy",null).setPositiveButton("Xóa",(d,w)->{products.remove(p);save();build("products");toast("Đã xóa sản phẩm");}).show();
+    }
 
     void warehouse(){
         long value=0; int low=0,total=0;
