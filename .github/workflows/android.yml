@@ -157,6 +157,19 @@ jobs:
           path: ${{ runner.temp }}/SoBanHang.apk
           if-no-files-found: error
 
+      - name: Publish latest APK
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Sổ Bán Hàng — Bản mới nhất
+          body: |
+            APK mới nhất được build và ký tự động từ nhánh main.
+          make_latest: true
+          prerelease: false
+          overwrite_files: true
+          files: ${{ runner.temp }}/SoBanHang.apk
+
       - name: Release signed APK
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
