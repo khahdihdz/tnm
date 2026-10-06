@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
     NumberFormat money=NumberFormat.getCurrencyInstance(new Locale("vi","VN"));
     final String APP_VERSION=BuildConfig.VERSION_NAME;
     final String UPDATE_API="https://api.github.com/repos/khahdihdz/tnm/releases";
-    final ExecutorService updateExecutor=Executors.newSingleThreadExecutor();
+    final ExecutorService updateExecutor=Executors.newSingleThreadExecutor();\n    String pendingProductSearch="";
 
     public void onCreate(Bundle b){
         super.onCreate(b);
