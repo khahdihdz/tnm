@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.InputStreamReader;\nimport com.journeyapps.barcodescanner.IntentIntegrator;\nimport com.journeyapps.barcodescanner.IntentResult;
 
 public class MainActivity extends Activity {
     LinearLayout root, content, nav; SharedPreferences sp; int blue=Color.rgb(37,99,235); int ink=Color.rgb(15,23,42), muted=Color.rgb(100,116,139), surface=Color.WHITE, bgColor=Color.rgb(246,248,252), line=Color.rgb(226,232,240);
@@ -308,9 +308,14 @@ public class MainActivity extends Activity {
         content.addView(heading("Danh sách sản phẩm"));
         if(products.size()==0){content.addView(tv("Chưa có sản phẩm.",14,muted));return;}
         LinearLayout filter=new LinearLayout(this);filter.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout searchRow=new LinearLayout(this);searchRow.setGravity(Gravity.CENTER_VERTICAL);
         EditText search=e("🔎 Tìm theo tên hoặc mã sản phẩm");
         search.setTextSize(14);search.setBackground(bg(surface,14));
-        filter.addView(search,new LinearLayout.LayoutParams(-1,dp(46)));
+        searchRow.addView(search,new LinearLayout.LayoutParams(0,dp(46),1));
+        Button scan=btn("▣ Quét");scan.setTextColor(blue);scan.setBackground(bg(Color.rgb(239,246,255),14));
+        LinearLayout.LayoutParams scanLp=new LinearLayout.LayoutParams(dp(72),dp(46));scanLp.setMargins(dp(6),0,0,0);searchRow.addView(scan,scanLp);
+        scan.setOnClickListener(v->scanBarcode());
+        filter.addView(searchRow);
         Spinner category=new Spinner(this);
         LinkedHashSet<String> cats=new LinkedHashSet<>();cats.add("Tất cả danh mục");
         for(Product p:products)cats.add(p.category);
@@ -330,6 +335,27 @@ public class MainActivity extends Activity {
         search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int b,int c){refresh.run();}public void afterTextChanged(android.text.Editable e){}});
         category.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){refresh.run();}public void onNothingSelected(android.widget.AdapterView<?> p){}});
         refresh.run();
+    }
+    void scanBarcode(){
+        try{
+            IntentIntegrator integrator=new IntentIntegrator(this);
+            integrator.setPrompt("Đưa mã vạch vào khung quét");
+            integrator.setBeepEnabled(true);
+            integrator.setOrientationLocked(false);
+            integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES);
+            integrator.initiateScan();
+        }catch(Exception ex){toast("Không thể mở trình quét mã vạch");}
+    }
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        IntentResult result=IntentIntegrator.parseActivityResult(requestCode,resultCode,data);
+        if(result!=null){
+            if(result.getContents()!=null){
+                build("products");
+                toast("Đã quét mã: "+result.getContents());
+            }
+            return;
+        }
+        super.onActivityResult(requestCode,resultCode,data);
     }
     void productItem(LinearLayout target,Product p){
         LinearLayout x=new LinearLayout(this);x.setOrientation(LinearLayout.VERTICAL);
