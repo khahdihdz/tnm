@@ -19,9 +19,9 @@ public class MainActivity extends Activity {
     void seed(){if(sp.getBoolean("seed",false)){load();return;}
         products.add(new Product("SP001","Nước suối 500ml",6000,40)); products.add(new Product("SP002","Cà phê lon",12000,25)); products.add(new Product("SP003","Mì ly",15000,18));
         customers.add(new Customer("Khách lẻ","")); customers.add(new Customer("Nguyễn Văn An","0901234567")); save(); sp.edit().putBoolean("seed",true).apply();}
-    void load(){/* dữ liệu được giữ trong bộ nhớ phiên; bản demo khởi tạo lại khi app mới */ seedFromPrefs(); }
-    void seedFromPrefs(){ if(products.size()==0){products.add(new Product("SP001","Nước suối 500ml",6000,40));products.add(new Product("SP002","Cà phê lon",12000,25));products.add(new Product("SP003","Mì ly",15000,18));customers.add(new Customer("Khách lẻ",""));}}
-    void save(){sp.edit().putInt("products",products.size()).putInt("sales",sales.size()).apply();}
+    void load(){String ps=sp.getString("products_json",""); if(!ps.isEmpty()) for(String x:ps.split("\\|\\|")){String[] a=x.split("\\|",-1);if(a.length==4)products.add(new Product(a[0],a[1],Long.parseLong(a[2]),Long.parseLong(a[3])));} String cs=sp.getString("customers_json",""); if(!cs.isEmpty()) for(String x:cs.split("\\|\\|")){String[] a=x.split("\\|",-1);if(a.length==2)customers.add(new Customer(a[0],a[1]));} String ss=sp.getString("sales_json",""); if(!ss.isEmpty()) for(String x:ss.split("\\|\\|")){String[] a=x.split("\\|",-1);if(a.length==3)sales.add(new Sale(a[0],Long.parseLong(a[1]),a[2]));}}
+    void seedFromPrefs(){ }
+    void save(){StringBuilder p=new StringBuilder(),c=new StringBuilder(),s=new StringBuilder(); for(Product x:products){if(p.length()>0)p.append("||");p.append(x.code).append("|").append(x.name).append("|").append(x.price).append("|").append(x.stock);} for(Customer x:customers){if(c.length()>0)c.append("||");c.append(x.name).append("|").append(x.phone);} for(Sale x:sales){if(s.length()>0)s.append("||");s.append(x.customer).append("|").append(x.total).append("|").append(x.payment);} sp.edit().putString("products_json",p.toString()).putString("customers_json",c.toString()).putString("sales_json",s.toString()).apply();}
     String V(long n){return money.format(n).replace("\u00a0"," ");}
     TextView tv(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setPadding(4,4,4,4);return t;}
     GradientDrawable bg(int color,int radius){GradientDrawable g=new GradientDrawable();g.setColor(color);g.setCornerRadius(radius);return g;}
