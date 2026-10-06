@@ -307,10 +307,46 @@ public class MainActivity extends Activity {
     void products(){
         content.addView(heading("Danh sách sản phẩm"));
         if(products.size()==0){content.addView(tv("Chưa có sản phẩm.",14,muted));return;}
-        for(int i=0;i<products.size();i++){
-            Product p=products.get(i);
-            productItem(p);
-        }
+        LinearLayout filter=new LinearLayout(this);filter.setOrientation(LinearLayout.VERTICAL);
+        EditText search=e("🔎 Tìm theo tên hoặc mã sản phẩm");
+        search.setTextSize(14);search.setBackground(bg(surface,14));
+        filter.addView(search,new LinearLayout.LayoutParams(-1,dp(46)));
+        Spinner category=new Spinner(this);
+        LinkedHashSet<String> cats=new LinkedHashSet<>();cats.add("Tất cả danh mục");
+        for(Product p:products)cats.add(p.category);
+        category.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,new ArrayList<>(cats)));
+        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(44));cp.setMargins(0,dp(6),0,dp(8));filter.addView(category,cp);
+        content.addView(filter);
+        LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);content.addView(list);
+        Runnable refresh=()->{
+            list.removeAllViews();String q=search.getText().toString().trim().toLowerCase(Locale.getDefault());String cat=""+category.getSelectedItem();int count=0;
+            for(Product p:products){
+                boolean match=q.isEmpty()||p.name.toLowerCase(Locale.getDefault()).contains(q)||p.code.toLowerCase(Locale.getDefault()).contains(q);
+                boolean catMatch=cat.equals("Tất cả danh mục")||p.category.equals(cat);
+                if(match&&catMatch){productItem(list,p);count++;}
+            }
+            if(count==0)list.addView(tv("Không tìm thấy sản phẩm phù hợp.",14,muted));
+        };
+        search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int b,int c){refresh.run();}public void afterTextChanged(android.text.Editable e){}});
+        category.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){refresh.run();}public void onNothingSelected(android.widget.AdapterView<?> p){}});
+        refresh.run();
+    }
+    void productItem(LinearLayout target,Product p){
+        LinearLayout x=new LinearLayout(this);x.setOrientation(LinearLayout.VERTICAL);
+        x.setPadding(dp(compact()?14:16),dp(12),dp(compact()?14:16),dp(10));x.setBackground(bg(surface,16));x.setElevation(dp(1));
+        LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout info=new LinearLayout(this);info.setOrientation(LinearLayout.VERTICAL);
+        TextView title=tv(p.name,compact()?15:16,ink);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setMaxLines(1);title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView sub=tv(p.code+" · "+V(p.price)+" · Tồn "+p.stock+" "+p.unit,compact()?12:13,muted);sub.setMaxLines(2);sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        info.addView(title);info.addView(sub);top.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+        Button edit=btn("Sửa");edit.setTextColor(blue);edit.setBackground(bg(Color.rgb(239,246,255),12));
+        Button del=btn("Xóa");del.setTextColor(Color.rgb(220,38,38));del.setBackground(bg(Color.rgb(254,242,242),12));
+        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(54),dp(40));bp.setMargins(dp(5),0,0,0);top.addView(edit,bp);
+        LinearLayout.LayoutParams dpLp=new LinearLayout.LayoutParams(dp(54),dp(40));dpLp.setMargins(dp(5),0,0,0);top.addView(del,dpLp);
+        x.addView(top);
+        TextView detail=tv(p.category+" · "+p.unit+" · Giá nhập "+V(p.cost)+" · Tối thiểu "+p.minStock,compact()?11:12,muted);detail.setMaxLines(2);detail.setEllipsize(android.text.TextUtils.TruncateAt.END);detail.setPadding(0,dp(5),0,0);x.addView(detail);
+        edit.setOnClickListener(v->editProduct(p));del.setOnClickListener(v->deleteProduct(p));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,ViewGroup.LayoutParams.WRAP_CONTENT);lp.setMargins(0,0,0,dp(8));target.addView(x,lp);
     }
     void productItem(Product p){
         LinearLayout x=new LinearLayout(this);x.setOrientation(LinearLayout.VERTICAL);
