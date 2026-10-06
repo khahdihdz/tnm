@@ -1,27 +1,27 @@
-# TNM Sales Manager
+# Sổ Bán Hàng — TNM
 
-WebApp quản lý bán hàng toàn diện, tối ưu cho GitHub Pages và sử dụng offline.
+Ứng dụng Android quản lý bán hàng dành cho cửa hàng cá nhân/hộ kinh doanh.
 
 ## Chức năng
-- Dashboard doanh thu, lợi nhuận, tồn kho
-- POS bán hàng
-- Sản phẩm, khách hàng, nhà cung cấp
-- Đơn hàng và tồn kho
-- Nhập hàng, chi phí, công nợ
-- Báo cáo
-- Import/export CSV
-- Backup/restore JSON
-- PWA/offline
-- Responsive mobile/tablet/desktop
-- Dark mode
+- Dashboard doanh thu, số đơn, tồn kho.
+- Tạo đơn bán hàng nhanh.
+- Quản lý sản phẩm, giá bán và tồn kho.
+- Quản lý khách hàng.
+- Báo cáo doanh thu và đơn hàng.
+- Giao diện tiếng Việt, tối ưu điện thoại.
+- Hoạt động offline, không cần máy chủ.
+- Có thể mở rộng thêm công nợ, nhập hàng, chi phí, CSV và sao lưu.
 
-## Chạy
-Không cần Node.js hoặc npm. Mở `index.html` bằng web server tĩnh.
+## Build APK
+Dự án dùng Android Gradle Plugin và Java, không cần Node.js/npm.
 
-## GitHub Pages
-Workflow trong `.github/workflows/pages.yml` triển khai trực tiếp thư mục gốc sau mỗi push vào `main`.
+```bash
+./gradlew assembleDebug
+```
 
-## Dữ liệu
-Dữ liệu demo được lưu trong LocalStorage trên trình duyệt. Có thể backup/restore trong Cài đặt.
+APK debug: `app/build/outputs/apk/debug/app-debug.apk`
+
+## GitHub Actions
+Mỗi push vào `main` hoặc chạy thủ công workflow **Build Android APK** sẽ build APK và upload artifact. Khi tạo tag dạng `v*`, workflow tự tạo GitHub Release kèm APK.
 
 © 2026 khahdihdz
