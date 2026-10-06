@@ -39,7 +39,8 @@ jobs:
           BT="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)"
           echo "BT=$BT" >> "$GITHUB_ENV"
           "$BT/apksigner" --version
-          "$BT/zipalign" -h >/dev/null
+          test -x "$BT/apksigner"
+          test -x "$BT/zipalign"
 
       - name: Restore APKSIGN keystore
         if: github.event_name != 'pull_request'
