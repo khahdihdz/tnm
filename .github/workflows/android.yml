@@ -52,35 +52,30 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
 
-          test -n "$KEYSTORE_B64" || {
-            echo "::error::ANDROID_SIGNING_KEYSTORE_BASE64 is empty."
-            exit 1
-          }
-
-          test -n "$STORE_PASSWORD" || {
-            echo "::error::ANDROID_SIGNING_STORE_PASSWORD is empty."
-            exit 1
-          }
+          test -n "$KEYSTORE_B64" || { echo "::error::ANDROID_SIGNING_KEYSTORE_BASE64 is empty."; exit 1; }
+          test -n "$STORE_PASSWORD" || { echo "::error::ANDROID_SIGNING_STORE_PASSWORD is empty."; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "::error::ANDROID_SIGNING_KEY_ALIAS is empty."; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "::error::ANDROID_SIGNING_KEY_PASSWORD is empty."; exit 1; }
 
           KS="$RUNNER_TEMP/khahdihdz-release.jks"
           CLEAN_B64="$RUNNER_TEMP/keystore.b64"
           DECODED_KS="$RUNNER_TEMP/khahdihdz-release-decoded.jks"
 
-          # Remove whitespace introduced by copying the Base64 value.
           printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' > "$CLEAN_B64"
 
-          # Decode the normal Base64-encoded keystore.
           if ! base64 --decode "$CLEAN_B64" > "$KS" 2>/dev/null; then
             echo "::error::ANDROID_SIGNING_KEYSTORE_BASE64 is not valid Base64."
             exit 1
           fi
           chmod 600 "$KS"
 
-          # Accept an accidentally double-Base64-encoded keystore.
+          # Handle an accidentally double-Base64-encoded keystore.
           if ! keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" >/dev/null 2>&1; then
             if LC_ALL=C grep -Eq '^[A-Za-z0-9+/=]+$' "$KS"; then
               if base64 --decode "$KS" > "$DECODED_KS" 2>/dev/null &&
@@ -92,13 +87,23 @@ jobs:
             fi
           fi
 
-          # Final validation: the keystore and store password must match.
-          if ! keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" >/dev/null 2>&1; then
-            echo "::error::APKSIGN keystore could not be opened. The Base64 secret and STORE_PASSWORD must belong to the same keystore."
+          keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" >/dev/null 2>&1 || {
+            echo "::error::APKSIGN keystore cannot be opened with STORE_PASSWORD."
+            exit 1
+          }
+
+          # Verify the exact alias and its private-key password before apksigner runs.
+          if keytool -list -v -keystore "$KS" -storepass "$STORE_PASSWORD"               -alias "$KEY_ALIAS" -keypass "$KEY_PASSWORD" >/dev/null 2>&1; then
+            echo "APKSIGN keystore, alias and KEY_PASSWORD validated."
+            echo "APKSIGN_KEY_PASSWORD_MODE=key" >> "$GITHUB_ENV"
+          elif keytool -list -v -keystore "$KS" -storepass "$STORE_PASSWORD"               -alias "$KEY_ALIAS" -keypass "$STORE_PASSWORD" >/dev/null 2>&1; then
+            echo "::warning::KEY_PASSWORD does not match the private key, but STORE_PASSWORD does. Using STORE_PASSWORD for the signing key."
+            echo "APKSIGN_KEY_PASSWORD_MODE=store" >> "$GITHUB_ENV"
+          else
+            echo "::error::The keystore and STORE_PASSWORD are valid, but KEY_ALIAS/KEY_PASSWORD cannot unlock the private key."
+            echo "::error::ANDROID_SIGNING_KEY_PASSWORD in APKSIGN and this repository must match the private-key password exactly."
             exit 1
           fi
-
-          echo "APKSIGN keystore restored and validated."
 
       - name: Align release APK
         if: github.event_name != 'pull_request'
@@ -122,17 +127,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          test -n "$STORE_PASSWORD"
-          test -n "$KEY_ALIAS"
-          test -n "$KEY_PASSWORD"
+          case "${APKSIGN_KEY_PASSWORD_MODE:-key}" in
+            store) EFFECTIVE_KEY_PASSWORD="$STORE_PASSWORD" ;;
+            key)   EFFECTIVE_KEY_PASSWORD="$KEY_PASSWORD" ;;
+            *)     echo "::error::Invalid APKSIGN key-password mode."; exit 1 ;;
+          esac
 
-          "$BT/apksigner" sign \
-            --ks "$RUNNER_TEMP/khahdihdz-release.jks" \
-            --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass "pass:$STORE_PASSWORD" \
-            --key-pass "pass:$KEY_PASSWORD" \
-            --out "$RUNNER_TEMP/SoBanHang.apk" \
-            "$RUNNER_TEMP/SoBanHang-aligned.apk"
+          "$BT/apksigner" sign             --ks "$RUNNER_TEMP/khahdihdz-release.jks"             --ks-key-alias "$KEY_ALIAS"             --ks-pass "pass:$STORE_PASSWORD"             --key-pass "pass:$EFFECTIVE_KEY_PASSWORD"             --out "$RUNNER_TEMP/SoBanHang.apk"             "$RUNNER_TEMP/SoBanHang-aligned.apk"
 
       - name: Verify signed APK
         if: github.event_name != 'pull_request'
