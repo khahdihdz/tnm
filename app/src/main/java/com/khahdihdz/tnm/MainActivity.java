@@ -23,7 +23,7 @@ import java.io.InputStreamReader;
 
 public class MainActivity extends Activity {
     LinearLayout root, content, nav; SharedPreferences sp; int blue=Color.rgb(37,99,235); int ink=Color.rgb(15,23,42), muted=Color.rgb(100,116,139), surface=Color.WHITE, bgColor=Color.rgb(246,248,252), line=Color.rgb(226,232,240);
-    ArrayList<Product> products=new ArrayList<>(); ArrayList<Sale> sales=new ArrayList<>(); ArrayList<Customer> customers=new ArrayList<>();
+    ArrayList<Product> products=new ArrayList<>(); ArrayList<Sale> sales=new ArrayList<>(); ArrayList<Customer> customers=new ArrayList<>(); ArrayList<StockMove> stockMoves=new ArrayList<>();
     NumberFormat money=NumberFormat.getCurrencyInstance(new Locale("vi","VN"));
     final String APP_VERSION=BuildConfig.VERSION_NAME;
     final String UPDATE_API="https://api.github.com/repos/khahdihdz/tnm/releases";
@@ -54,7 +54,7 @@ public class MainActivity extends Activity {
         v.requestApplyInsets();
     }
     void seed(){if(sp.getBoolean("seed",false)){load();return;}
-        products.add(new Product("SP001","Nước suối 500ml",6000,40)); products.add(new Product("SP002","Cà phê lon",12000,25)); products.add(new Product("SP003","Mì ly",15000,18));
+        products.add(new Product("SP001","Nước suối 500ml",6000,40,3500,"Đồ uống","chai",10)); products.add(new Product("SP002","Cà phê lon",12000,25,8000,"Đồ uống","lon",8)); products.add(new Product("SP003","Mì ly",15000,18,9500,"Thực phẩm","ly",5));
         customers.add(new Customer("Khách lẻ","")); customers.add(new Customer("Nguyễn Văn An","0901234567")); save(); sp.edit().putBoolean("seed",true).apply();}
     void load(){String ps=sp.getString("products_json",""); if(!ps.isEmpty()) for(String x:ps.split("\\|\\|")){String[] a=x.split("\\|",-1);if(a.length==4)products.add(new Product(a[0],a[1],Long.parseLong(a[2]),Long.parseLong(a[3])));} String cs=sp.getString("customers_json",""); if(!cs.isEmpty()) for(String x:cs.split("\\|\\|")){String[] a=x.split("\\|",-1);if(a.length==2)customers.add(new Customer(a[0],a[1]));} String ss=sp.getString("sales_json",""); if(!ss.isEmpty()) for(String x:ss.split("\\|\\|")){String[] a=x.split("\\|",-1);if(a.length==3)sales.add(new Sale(a[0],Long.parseLong(a[1]),a[2]));}}
     void seedFromPrefs(){ }
@@ -184,7 +184,7 @@ public class MainActivity extends Activity {
         bar.setBackgroundColor(surface);
 
         String title=page.equals("dashboard")?"Tổng quan":page.equals("sales")?"Bán hàng":
-            page.equals("products")?"Sản phẩm":page.equals("customers")?"Khách hàng":
+            page.equals("products")?"Sản phẩm":page.equals("warehouse")?"Kho hàng":page.equals("customers")?"Khách hàng":
             page.equals("reports")?"Báo cáo":"Cài đặt";
         TextView titleView=tv(title,compact()?21:23,ink);
         titleView.setSingleLine(true);
@@ -193,7 +193,7 @@ public class MainActivity extends Activity {
         bar.addView(titleView,new LinearLayout.LayoutParams(0,58,1));
 
         String action=page.equals("dashboard")||page.equals("sales")?"Bán hàng":
-            page.equals("products")||page.equals("customers")?"+ Thêm":"";
+            page.equals("products")||page.equals("customers")?"+ Thêm":page.equals("warehouse")?"Nhập kho":"";
         if(!action.isEmpty()){
             TextView add=tv(compact() ? (page.equals("dashboard")||page.equals("sales") ? "+" : "+") : action,compact()?13:14,Color.WHITE);
             add.setGravity(Gravity.CENTER);
@@ -204,6 +204,7 @@ public class MainActivity extends Activity {
             add.setOnClickListener(v->{
                 if(page.equals("products")) addProduct();
                 else if(page.equals("customers")) addCustomer();
+                else if(page.equals("warehouse")) stockIn();
                 else newSale();
             });
             LinearLayout.LayoutParams actionLp=new LinearLayout.LayoutParams(-2,dp(compact()?40:44));
@@ -228,6 +229,7 @@ public class MainActivity extends Activity {
         addNav(com.khahdihdz.tnm.R.drawable.ic_home,"Tổng quan","dashboard",page.equals("dashboard"));
         addNav(com.khahdihdz.tnm.R.drawable.ic_cart,"Bán hàng","sales",page.equals("sales"));
         addNav(com.khahdihdz.tnm.R.drawable.ic_inventory,"Sản phẩm","products",page.equals("products"));
+        addNav(com.khahdihdz.tnm.R.drawable.ic_inventory,"Kho hàng","warehouse",page.equals("warehouse"));
         addNav(com.khahdihdz.tnm.R.drawable.ic_people,"Khách hàng","customers",page.equals("customers"));
         addNav(com.khahdihdz.tnm.R.drawable.ic_report,"Báo cáo","reports",page.equals("reports"));
         root.addView(nav,new LinearLayout.LayoutParams(-1,dp(compact()?68:72)));
@@ -282,7 +284,7 @@ public class MainActivity extends Activity {
         p.addView(c,lp);
     }
     void render(String page){content.removeAllViews();
-        if(page.equals("dashboard"))dashboard(); else if(page.equals("sales"))sales(); else if(page.equals("products"))products(); else if(page.equals("customers"))customers(); else if(page.equals("reports"))reports();
+        if(page.equals("dashboard"))dashboard(); else if(page.equals("sales"))sales(); else if(page.equals("products"))products(); else if(page.equals("warehouse"))warehouse(); else if(page.equals("customers"))customers(); else if(page.equals("reports"))reports();
     }
     void dashboard(){
         long rev=0;for(Sale s:sales)rev+=s.total;
@@ -302,7 +304,41 @@ public class MainActivity extends Activity {
         content.addView(heading("Tồn kho thấp"));for(Product p:products)if(p.stock<=5)item(p.name,"Còn "+p.stock+" sản phẩm","Cần nhập");
     }
     void sales(){content.addView(heading("Lịch sử bán hàng"));if(sales.size()==0)content.addView(tv("Chưa có đơn hàng.",15,Color.GRAY));for(int i=sales.size()-1;i>=0;i--)item("#"+(i+1)+" · "+sales.get(i).customer,V(sales.get(i).total),sales.get(i).payment);}
-    void products(){content.addView(heading("Danh sách sản phẩm"));for(Product p:products)item(p.name,p.code+" · "+V(p.price),"Tồn: "+p.stock);}
+    void products(){content.addView(heading("Danh sách sản phẩm"));for(Product p:products)item(p.name,p.code+" · "+V(p.price),p.category+" · "+p.unit+" · Tồn: "+p.stock+" · Tối thiểu "+p.minStock);}
+
+    void warehouse(){
+        long value=0; int low=0,total=0;
+        for(Product p:products){value+=(long)p.price*p.stock; total+=p.stock; if(p.stock<=p.minStock)low++;}
+        LinearLayout actions=new LinearLayout(this); actions.setOrientation(LinearLayout.HORIZONTAL);
+        Button out=btn("↗ Xuất kho"); out.setTextColor(Color.WHITE); out.setBackground(bg(Color.rgb(220,38,38),14)); out.setOnClickListener(v->stockOut());
+        Button in=btn("↙ Nhập kho"); in.setTextColor(Color.WHITE); in.setBackground(bg(blue,14)); in.setOnClickListener(v->stockIn());
+        actions.addView(out,new LinearLayout.LayoutParams(0,dp(44),1)); LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(0,dp(44),1); ip.setMargins(dp(6),0,0,0); actions.addView(in,ip); content.addView(actions);
+        LinearLayout stats=new LinearLayout(this);stats.setOrientation(LinearLayout.HORIZONTAL);card(stats,"Số lượng tồn",""+total);card(stats,"Giá trị kho",V(value));content.addView(stats);
+        content.addView(heading("Cảnh báo tồn kho"));
+        if(low==0)content.addView(tv("✓ Kho đang ở mức an toàn.",14,Color.rgb(22,101,52)));
+        for(Product p:products)if(p.stock<=p.minStock)item(p.name,"Còn "+p.stock+" "+p.unit,"Tối thiểu "+p.minStock+" · Cần nhập");
+        content.addView(heading("Hàng hóa trong kho"));
+        for(Product p:products)item(p.name,p.category+" · "+p.unit,"Tồn "+p.stock+" · Giá nhập "+V(p.cost));
+        content.addView(heading("Lịch sử nhập / xuất"));
+        if(stockMoves.size()==0)content.addView(tv("Chưa có giao dịch kho.",14,muted));
+        for(int i=stockMoves.size()-1;i>=0&&i>=stockMoves.size()-10;i--){StockMove m=stockMoves.get(i);item(m.code,m.type+" "+m.qty,m.note+" · "+m.time);}
+    }
+    void stockIn(){
+        if(products.size()==0){toast("Chưa có sản phẩm");return;}
+        LinearLayout f=form();Spinner spn=new Spinner(this);String[] names=new String[products.size()];
+        for(int i=0;i<products.size();i++)names[i]=products.get(i).name+" · tồn "+products.get(i).stock;
+        spn.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,names));
+        EditText qty=e("Số lượng nhập"),note=e("Nhà cung cấp / ghi chú");f.addView(tv("Sản phẩm",13,muted));f.addView(spn);f.addView(qty);f.addView(note);
+        dialog("Nhập kho",f,()->{int q=(int)num(qty);if(q<=0){toast("Số lượng không hợp lệ");return;}Product p=products.get(spn.getSelectedItemPosition());p.stock+=q;stockMoves.add(new StockMove(p.code,"Nhập",q,note.getText().toString().trim().isEmpty()?"Nhập hàng":note.getText().toString().trim(),new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.getDefault()).format(new Date())));save();build("warehouse");});
+    }
+    void stockOut(){
+        if(products.size()==0){toast("Chưa có sản phẩm");return;}
+        LinearLayout f=form();Spinner spn=new Spinner(this);String[] names=new String[products.size()];
+        for(int i=0;i<products.size();i++)names[i]=products.get(i).name+" · tồn "+products.get(i).stock;
+        spn.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,names));
+        EditText qty=e("Số lượng xuất"),note=e("Lý do / người nhận");f.addView(tv("Sản phẩm",13,muted));f.addView(spn);f.addView(qty);f.addView(note);
+        dialog("Xuất kho",f,()->{int q=(int)num(qty);Product p=products.get(spn.getSelectedItemPosition());if(q<=0||q>p.stock){toast("Số lượng xuất không hợp lệ");return;}p.stock-=q;stockMoves.add(new StockMove(p.code,"Xuất",q,note.getText().toString().trim().isEmpty()?"Xuất kho":note.getText().toString().trim(),new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.getDefault()).format(new Date())));save();build("warehouse");});
+    }
     void customers(){content.addView(heading("Danh sách khách hàng"));for(Customer c:customers)item(c.name,c.phone,c.phone.isEmpty()?"Khách lẻ":"Khách hàng");}
     void reports(){long rev=0;for(Sale s:sales)rev+=s.total;content.addView(heading("Báo cáo kinh doanh"));card(content,"Tổng doanh thu",V(rev));card(content,"Số đơn hàng",""+sales.size());long avg=sales.size()==0?0:rev/sales.size();card(content,"Giá trị đơn trung bình",V(avg));content.addView(heading("Ghi chú"));content.addView(tv("Dữ liệu bán hàng được lưu cục bộ trên thiết bị. Hãy sao lưu thường xuyên.",14,Color.GRAY));}
     void item(String a,String b,String c){
@@ -311,7 +347,7 @@ public class MainActivity extends Activity {
         TextView title=tv(a,compact()?15:16,ink);title.setMaxLines(2);title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         TextView sub=tv(b+"  •  "+c,compact()?12:13,muted);sub.setMaxLines(2);sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
         x.addView(title);x.addView(sub);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,ViewGroup.LayoutParams.WRAP_CONTENT);lp.setMargins(0,0,0,8);content.addView(x,lp);}
-    void addProduct(){final LinearLayout f=form();EditText code=e("Mã sản phẩm"),name=e("Tên sản phẩm"),price=e("Giá bán"),stock=e("Tồn kho");f.addView(code);f.addView(name);f.addView(price);f.addView(stock);dialog("Thêm sản phẩm",f,()->{products.add(new Product(code.getText().toString(),name.getText().toString(),num(price),num(stock)));save();build("products");});}
+    void addProduct(){final LinearLayout f=form();EditText code=e("Mã sản phẩm"),name=e("Tên sản phẩm"),price=e("Giá bán"),stock=e("Tồn kho"),cost=e("Giá nhập"),category=e("Danh mục"),unit=e("Đơn vị"),min=e("Tồn tối thiểu");f.addView(code);f.addView(name);f.addView(price);f.addView(stock);f.addView(cost);f.addView(category);f.addView(unit);f.addView(min);dialog("Thêm sản phẩm",f,()->{products.add(new Product(code.getText().toString().trim(),name.getText().toString().trim(),num(price),num(stock),num(cost),category.getText().toString().trim().isEmpty()?"Khác":category.getText().toString().trim(),unit.getText().toString().trim().isEmpty()?"cái":unit.getText().toString().trim(),num(min)));save();build("products");});}
     void addCustomer(){LinearLayout f=form();EditText name=e("Tên khách hàng"),phone=e("Số điện thoại");f.addView(name);f.addView(phone);dialog("Thêm khách hàng",f,()->{customers.add(new Customer(name.getText().toString(),phone.getText().toString()));save();build("customers");});}
     void newSale(){if(products.size()==0){toast("Chưa có sản phẩm");return;}LinearLayout f=form();Spinner spn=new Spinner(this);String[] names=new String[products.size()];for(int i=0;i<products.size();i++)names[i]=products.get(i).name+" — "+V(products.get(i).price);spn.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,names));EditText qty=e("Số lượng");f.addView(tv("Chọn sản phẩm",13,Color.DKGRAY));f.addView(spn);f.addView(qty);dialog("Tạo đơn hàng",f,()->{int q=(int)num(qty);if(q<1){toast("Số lượng không hợp lệ");return;}Product p=products.get(spn.getSelectedItemPosition());if(q>p.stock){toast("Không đủ tồn kho");return;}p.stock-=q;sales.add(new Sale("Khách lẻ",(long)p.price*q,"Tiền mặt"));save();build("sales");toast("Đã tạo đơn hàng");});}
     LinearLayout form(){LinearLayout f=new LinearLayout(this);f.setOrientation(LinearLayout.VERTICAL);f.setPadding(dp(20),dp(4),dp(20),0);return f;}
@@ -319,7 +355,7 @@ public class MainActivity extends Activity {
     long num(EditText e){try{return Long.parseLong(e.getText().toString().trim());}catch(Exception x){return 0;}}
     void dialog(String title,View v,Runnable save){AlertDialog d=new AlertDialog.Builder(this).setTitle(title).setView(v).setNegativeButton("Hủy",null).setPositiveButton("Lưu",null).create();d.setOnShowListener(x->d.getButton(-1).setOnClickListener(y->{save.run();d.dismiss();}));d.show();}
     void toast(String s){Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
-    static class Product{String code,name;long price,stock;Product(String c,String n,long p,long s){code=c;name=n;price=p;stock=s;}}
+    static class Product{String code,name,category,unit;long price,stock,cost,minStock;Product(String c,String n,long p,long s){this(c,n,p,s,0,"Khác","cái",5);}Product(String c,String n,long p,long s,long co,String ca,String u,long m){code=c;name=n;price=p;stock=s;cost=co;category=ca;unit=u;minStock=m;}}\n    static class StockMove{String code,type,note,time;int qty;StockMove(String c,String t,int q,String n,String tm){code=c;type=t;qty=q;note=n;time=tm;}}
     static class Sale{String customer,payment;long total;Sale(String c,long t,String p){customer=c;total=t;payment=p;}}
     static class Customer{String name,phone;Customer(String n,String p){name=n;phone=p;}}
 }
