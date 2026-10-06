@@ -20,8 +20,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import com.journeyapps.barcodescanner.IntentIntegrator;
-import com.journeyapps.barcodescanner.IntentResult;
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
 
 public class MainActivity extends Activity {
     LinearLayout root, content, nav; SharedPreferences sp; int blue=Color.rgb(37,99,235); int ink=Color.rgb(15,23,42), muted=Color.rgb(100,116,139), surface=Color.WHITE, bgColor=Color.rgb(246,248,252), line=Color.rgb(226,232,240);
