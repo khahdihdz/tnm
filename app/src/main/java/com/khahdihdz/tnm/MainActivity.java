@@ -4,6 +4,7 @@ import android.app.*;
 import android.os.*;
 import android.content.*;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.*;
 import android.widget.*;
@@ -15,7 +16,24 @@ public class MainActivity extends Activity {
     ArrayList<Product> products=new ArrayList<>(); ArrayList<Sale> sales=new ArrayList<>(); ArrayList<Customer> customers=new ArrayList<>();
     NumberFormat money=NumberFormat.getCurrencyInstance(new Locale("vi","VN"));
 
-    public void onCreate(Bundle b){super.onCreate(b); sp=getSharedPreferences("tnm",0); seed(); build("dashboard");}
+    public void onCreate(Bundle b){
+        super.onCreate(b);
+        getWindow().setStatusBarColor(Color.rgb(246,248,252));
+        getWindow().setNavigationBarColor(Color.WHITE);
+        if(Build.VERSION.SDK_INT>=29) getWindow().setNavigationBarContrastEnforced(false);
+        if(Build.VERSION.SDK_INT>=26) getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        else if(Build.VERSION.SDK_INT>=23) getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        sp=getSharedPreferences("tnm",0); seed(); build("dashboard");
+    }
+    int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+0.5f);}
+    void applyInsets(LinearLayout v){
+        v.setOnApplyWindowInsetsListener((view,insets)->{
+            view.setPadding(0,insets.getSystemWindowInsetTop(),0,insets.getSystemWindowInsetBottom());
+            return insets;
+        });
+        v.requestApplyInsets();
+    }
     void seed(){if(sp.getBoolean("seed",false)){load();return;}
         products.add(new Product("SP001","Nước suối 500ml",6000,40)); products.add(new Product("SP002","Cà phê lon",12000,25)); products.add(new Product("SP003","Mì ly",15000,18));
         customers.add(new Customer("Khách lẻ","")); customers.add(new Customer("Nguyễn Văn An","0901234567")); save(); sp.edit().putBoolean("seed",true).apply();}
@@ -23,21 +41,106 @@ public class MainActivity extends Activity {
     void seedFromPrefs(){ }
     void save(){StringBuilder p=new StringBuilder(),c=new StringBuilder(),s=new StringBuilder(); for(Product x:products){if(p.length()>0)p.append("||");p.append(x.code).append("|").append(x.name).append("|").append(x.price).append("|").append(x.stock);} for(Customer x:customers){if(c.length()>0)c.append("||");c.append(x.name).append("|").append(x.phone);} for(Sale x:sales){if(s.length()>0)s.append("||");s.append(x.customer).append("|").append(x.total).append("|").append(x.payment);} sp.edit().putString("products_json",p.toString()).putString("customers_json",c.toString()).putString("sales_json",s.toString()).apply();}
     String V(long n){return money.format(n).replace("\u00a0"," ");}
-    TextView tv(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setPadding(4,4,4,4);return t;}
+    TextView tv(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setIncludeFontPadding(false);return t;}
     GradientDrawable bg(int color,int radius){GradientDrawable g=new GradientDrawable();g.setColor(color);g.setCornerRadius(radius);return g;}
     Button btn(String text){Button b=new Button(this);b.setText(text);b.setTextSize(13);b.setAllCaps(false);return b;}
-    void build(String page){root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.rgb(246,248,252));
-        LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(20,12,12,8);
-        TextView title=tv(page.equals("dashboard")?"Tổng quan":page.equals("sales")?"Bán hàng":page.equals("products")?"Sản phẩm":page.equals("customers")?"Khách hàng":page.equals("reports")?"Báo cáo":"Cài đặt",21,Color.rgb(20,32,50));bar.addView(title,new LinearLayout.LayoutParams(0,60,1));
-        Button add=btn(page.equals("sales")?"+ Bán hàng":"+ Thêm"); add.setTextColor(Color.WHITE);add.setBackground(bg(blue,18));add.setOnClickListener(v->{if(page.equals("products"))addProduct();else if(page.equals("customers"))addCustomer();else if(page.equals("sales"))newSale();});bar.addView(add,new LinearLayout.LayoutParams(110,52));root.addView(bar);
-        ScrollView sv=new ScrollView(this);content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(16,4,16,90);sv.addView(content);root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));
-        nav=new LinearLayout(this);nav.setGravity(Gravity.CENTER);nav.setPadding(4,4,4,4);nav.setBackgroundColor(Color.WHITE);
-        addNav("⌂","Tổng quan","dashboard");addNav("＋","Bán hàng","sales");addNav("▣","Sản phẩm","products");addNav("♙","Khách hàng","customers");addNav("◒","Báo cáo","reports");root.addView(nav,new LinearLayout.LayoutParams(-1,64));
-        setContentView(root);render(page);
+    void build(String page){
+        root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.rgb(246,248,252));
+        applyInsets(root);
+
+        LinearLayout bar=new LinearLayout(this);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPadding(dp(18),dp(7),dp(14),dp(7));
+
+        String title=page.equals("dashboard")?"Tổng quan":page.equals("sales")?"Bán hàng":
+            page.equals("products")?"Sản phẩm":page.equals("customers")?"Khách hàng":
+            page.equals("reports")?"Báo cáo":"Cài đặt";
+        TextView titleView=tv(title,24,Color.rgb(15,23,42));
+        titleView.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        bar.addView(titleView,new LinearLayout.LayoutParams(0,58,1));
+
+        String action=page.equals("dashboard")||page.equals("sales")?"Bán hàng":
+            page.equals("products")||page.equals("customers")?"+ Thêm":"";
+        if(!action.isEmpty()){
+            TextView add=tv(action,14,Color.WHITE);
+            add.setGravity(Gravity.CENTER);
+            add.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+            add.setPadding(dp(16),0,dp(16),0);
+            add.setBackground(bg(blue,16));
+            add.setElevation(dp(2));
+            add.setOnClickListener(v->{
+                if(page.equals("products")) addProduct();
+                else if(page.equals("customers")) addCustomer();
+                else newSale();
+            });
+            bar.addView(add,new LinearLayout.LayoutParams(-2,dp(44)));
+        }
+        root.addView(bar,new LinearLayout.LayoutParams(-1,dp(66)));
+
+        ScrollView sv=new ScrollView(this);
+        sv.setFillViewport(true);
+        content=new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(16),dp(2),dp(16),dp(18));
+        sv.addView(content);
+        root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));
+
+        nav=new LinearLayout(this);
+        nav.setGravity(Gravity.CENTER);
+        nav.setPadding(dp(6),dp(7),dp(6),dp(7));
+        nav.setBackgroundColor(Color.WHITE);
+        nav.setElevation(dp(8));
+        addNav(com.khahdihdz.tnm.R.drawable.ic_home,"Tổng quan","dashboard",page.equals("dashboard"));
+        addNav(com.khahdihdz.tnm.R.drawable.ic_cart,"Bán hàng","sales",page.equals("sales"));
+        addNav(com.khahdihdz.tnm.R.drawable.ic_inventory,"Sản phẩm","products",page.equals("products"));
+        addNav(com.khahdihdz.tnm.R.drawable.ic_people,"Khách hàng","customers",page.equals("customers"));
+        addNav(com.khahdihdz.tnm.R.drawable.ic_report,"Báo cáo","reports",page.equals("reports"));
+        root.addView(nav,new LinearLayout.LayoutParams(-1,dp(72)));
+
+        setContentView(root);
+        render(page);
     }
-    void addNav(String icon,String label,String page){Button b=btn(icon+"\n"+label);b.setTextSize(11);b.setBackgroundColor(Color.TRANSPARENT);b.setOnClickListener(v->build(page));nav.addView(b,new LinearLayout.LayoutParams(0,60,1));}
+    void addNav(int iconRes,String label,String page,boolean selected){
+        LinearLayout item=new LinearLayout(this);
+        item.setOrientation(LinearLayout.VERTICAL);
+        item.setGravity(Gravity.CENTER);
+        item.setPadding(dp(4),dp(4),dp(4),dp(3));
+        item.setBackground(bg(selected?Color.rgb(239,246,255):Color.TRANSPARENT,18));
+
+        ImageView icon=new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setColorFilter(selected?blue:Color.rgb(100,116,139));
+        item.addView(icon,new LinearLayout.LayoutParams(dp(24),dp(24)));
+
+        TextView labelView=tv(label,11,selected?blue:Color.rgb(100,116,139));
+        labelView.setGravity(Gravity.CENTER);
+        labelView.setTypeface(Typeface.DEFAULT,selected?Typeface.BOLD:Typeface.NORMAL);
+        item.addView(labelView,new LinearLayout.LayoutParams(-1,dp(20)));
+
+        item.setOnClickListener(v->build(page));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(58),1);
+        lp.setMargins(dp(3),0,dp(3),0);
+        nav.addView(item,lp);
+    }
     TextView heading(String s){TextView t=tv(s,17,Color.rgb(20,32,50));t.setTypeface(null,1);t.setPadding(4,12,4,8);return t;}
-    void card(LinearLayout p,String title,String value){LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(16,14,16,14);c.setBackground(bg(Color.WHITE,24));TextView a=tv(title,13,Color.DKGRAY),v=tv(value,23,Color.rgb(20,32,50));v.setTypeface(null,1);c.addView(a);c.addView(v);p.addView(c,new LinearLayout.LayoutParams(0,105,1));}
+    void card(LinearLayout p,String title,String value){
+        LinearLayout c=new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setGravity(Gravity.CENTER_VERTICAL);
+        c.setPadding(dp(16),dp(12),dp(16),dp(12));
+        c.setBackground(bg(Color.WHITE,20));
+        c.setElevation(dp(1));
+        TextView a=tv(title,13,Color.rgb(100,116,139));
+        TextView v=tv(value,22,Color.rgb(15,23,42));
+        v.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        v.setMaxLines(1);
+        c.addView(a);c.addView(v);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(104),1);
+        lp.setMargins(0,dp(4),dp(5),dp(4));
+        p.addView(c,lp);
+    }
     void render(String page){content.removeAllViews();
         if(page.equals("dashboard"))dashboard(); else if(page.equals("sales"))sales(); else if(page.equals("products"))products(); else if(page.equals("customers"))customers(); else if(page.equals("reports"))reports();
     }
