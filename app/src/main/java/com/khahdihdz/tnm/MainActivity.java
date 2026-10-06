@@ -12,7 +12,6 @@ import android.net.Uri;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import androidx.core.app.NotificationCompat;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -124,8 +123,13 @@ public class MainActivity extends Activity {
                 }
                 final String version=remoteTag, url=downloadUrl;
                 runOnUiThread(()->{
-                    if(!version.isEmpty()) showUpdateDialog(version,url);
-                    else if(manual) toast("Bạn đang dùng phiên bản mới nhất.");
+                    if(!version.isEmpty()){
+                        String seen=sp.getString("update_seen_version","");
+                        if(manual || !version.equals(seen)){
+                            sp.edit().putString("update_seen_version",version).apply();
+                            showUpdateDialog(version,url);
+                        }
+                    } else if(manual) toast("Bạn đang dùng phiên bản mới nhất.");
                 });
             }catch(Exception e){
                 if(manual)runOnUiThread(()->toast("Không thể kiểm tra cập nhật lúc này."));
@@ -153,9 +157,13 @@ public class MainActivity extends Activity {
                 nm.createNotificationChannel(ch);
             }
             Intent i=new Intent(Intent.ACTION_VIEW,Uri.parse(downloadUrl.isEmpty()?"https://github.com/khahdihdz/tnm/releases/latest":downloadUrl));
-            PendingIntent pi=PendingIntent.getActivity(this,101,i,PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT>=23?PendingIntent.FLAG_IMMUTABLE:0));
-            NotificationCompat.Builder n=new NotificationCompat.Builder(this,"updates")
-                .setSmallIcon(com.khahdihdz.tnm.R.drawable.ic_report)
+            int flags=PendingIntent.FLAG_UPDATE_CURRENT;
+            if(Build.VERSION.SDK_INT>=23) flags|=PendingIntent.FLAG_IMMUTABLE;
+            PendingIntent pi=PendingIntent.getActivity(this,101,i,flags);
+            Notification.Builder n;
+            if(Build.VERSION.SDK_INT>=26)n=new Notification.Builder(this,"updates");
+            else n=new Notification.Builder(this);
+            n.setSmallIcon(com.khahdihdz.tnm.R.drawable.ic_report)
                 .setContentTitle("Sổ Bán Hàng có phiên bản mới")
                 .setContentText("Phiên bản "+version+" đã sẵn sàng cập nhật.")
                 .setAutoCancel(true).setContentIntent(pi);
