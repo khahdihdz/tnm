@@ -61,21 +61,18 @@ jobs:
           test -n "$KEYSTORE_B64" || { echo "::error::ANDROID_SIGNING_KEYSTORE_BASE64 is empty."; exit 1; }
           test -n "$STORE_PASSWORD" || { echo "::error::ANDROID_SIGNING_STORE_PASSWORD is empty."; exit 1; }
           test -n "$KEY_ALIAS" || { echo "::error::ANDROID_SIGNING_KEY_ALIAS is empty."; exit 1; }
-          test -n "$KEY_PASSWORD" || { echo "::error::ANDROID_SIGNING_KEY_PASSWORD is empty."; exit 1; }
 
           KS="$RUNNER_TEMP/khahdihdz-release.jks"
           CLEAN_B64="$RUNNER_TEMP/keystore.b64"
           DECODED_KS="$RUNNER_TEMP/khahdihdz-release-decoded.jks"
 
           printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' > "$CLEAN_B64"
-
-          if ! base64 --decode "$CLEAN_B64" > "$KS" 2>/dev/null; then
+          base64 --decode "$CLEAN_B64" > "$KS" 2>/dev/null || {
             echo "::error::ANDROID_SIGNING_KEYSTORE_BASE64 is not valid Base64."
             exit 1
-          fi
+          }
           chmod 600 "$KS"
 
-          # Handle an accidentally double-Base64-encoded keystore.
           if ! keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" >/dev/null 2>&1; then
             if LC_ALL=C grep -Eq '^[A-Za-z0-9+/=]+$' "$KS"; then
               if base64 --decode "$KS" > "$DECODED_KS" 2>/dev/null &&
@@ -92,17 +89,27 @@ jobs:
             exit 1
           }
 
-          # Verify the exact alias and its private-key password before apksigner runs.
-          if keytool -list -v -keystore "$KS" -storepass "$STORE_PASSWORD"               -alias "$KEY_ALIAS" -keypass "$KEY_PASSWORD" >/dev/null 2>&1; then
-            echo "APKSIGN keystore, alias and KEY_PASSWORD validated."
-            echo "APKSIGN_KEY_PASSWORD_MODE=key" >> "$GITHUB_ENV"
-          elif keytool -list -v -keystore "$KS" -storepass "$STORE_PASSWORD"               -alias "$KEY_ALIAS" -keypass "$STORE_PASSWORD" >/dev/null 2>&1; then
-            echo "::warning::KEY_PASSWORD does not match the private key, but STORE_PASSWORD does. Using STORE_PASSWORD for the signing key."
+          # apksigner reports PKCS12KeyStore for the APKSIGN keystore. In PKCS12,
+          # the private-key password is the keystore password; passing a different
+          # key password causes UnrecoverableKeyException/BadPaddingException.
+          STORE_TYPE="$(keytool -list -v -keystore "$KS" -storepass "$STORE_PASSWORD" 2>/dev/null | sed -n 's/^Keystore type: //p' | head -n1 | tr -d '\r')"
+          echo "Detected keystore type: $STORE_TYPE"
+
+          if [ "$STORE_TYPE" = "PKCS12" ]; then
             echo "APKSIGN_KEY_PASSWORD_MODE=store" >> "$GITHUB_ENV"
+            echo "::notice::PKCS12 keystore detected; apksigner will use STORE_PASSWORD for the private key."
           else
-            echo "::error::The keystore and STORE_PASSWORD are valid, but KEY_ALIAS/KEY_PASSWORD cannot unlock the private key."
-            echo "::error::ANDROID_SIGNING_KEY_PASSWORD in APKSIGN and this repository must match the private-key password exactly."
-            exit 1
+            test -n "$KEY_PASSWORD" || { echo "::error::ANDROID_SIGNING_KEY_PASSWORD is empty."; exit 1; }
+
+            if keytool -list -v -keystore "$KS" -storepass "$STORE_PASSWORD"                 -alias "$KEY_ALIAS" -keypass "$KEY_PASSWORD" >/dev/null 2>&1; then
+              echo "APKSIGN_KEY_PASSWORD_MODE=key" >> "$GITHUB_ENV"
+            elif keytool -list -v -keystore "$KS" -storepass "$STORE_PASSWORD"                 -alias "$KEY_ALIAS" -keypass "$STORE_PASSWORD" >/dev/null 2>&1; then
+              echo "APKSIGN_KEY_PASSWORD_MODE=store" >> "$GITHUB_ENV"
+              echo "::notice::The private-key password equals STORE_PASSWORD."
+            else
+              echo "::error::The keystore is valid, but KEY_ALIAS/KEY_PASSWORD cannot unlock the private key."
+              exit 1
+            fi
           fi
 
       - name: Align release APK
