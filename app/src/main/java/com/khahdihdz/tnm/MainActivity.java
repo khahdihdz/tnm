@@ -19,7 +19,9 @@ import java.util.concurrent.Executors;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.io.BufferedReader;
-import java.io.InputStreamReader;\nimport com.journeyapps.barcodescanner.IntentIntegrator;\nimport com.journeyapps.barcodescanner.IntentResult;
+import java.io.InputStreamReader;
+import com.journeyapps.barcodescanner.IntentIntegrator;
+import com.journeyapps.barcodescanner.IntentResult;
 
 public class MainActivity extends Activity {
     LinearLayout root, content, nav; SharedPreferences sp; int blue=Color.rgb(37,99,235); int ink=Color.rgb(15,23,42), muted=Color.rgb(100,116,139), surface=Color.WHITE, bgColor=Color.rgb(246,248,252), line=Color.rgb(226,232,240);
@@ -27,7 +29,8 @@ public class MainActivity extends Activity {
     NumberFormat money=NumberFormat.getCurrencyInstance(new Locale("vi","VN"));
     final String APP_VERSION=BuildConfig.VERSION_NAME;
     final String UPDATE_API="https://api.github.com/repos/khahdihdz/tnm/releases";
-    final ExecutorService updateExecutor=Executors.newSingleThreadExecutor();\n    String pendingProductSearch="";
+    final ExecutorService updateExecutor=Executors.newSingleThreadExecutor();
+    String pendingProductSearch="";
 
     public void onCreate(Bundle b){
         super.onCreate(b);
@@ -137,7 +140,9 @@ public class MainActivity extends Activity {
         });
     }
     void showUpdateDialog(String version,String downloadUrl){
-        String msg="Đã có phiên bản "+version+" mới hơn "+currentVersion()+".\n\nBạn có muốn cập nhật không?";
+        String msg="Đã có phiên bản "+version+" mới hơn "+currentVersion()+".
+
+Bạn có muốn cập nhật không?";
         AlertDialog d=new AlertDialog.Builder(this).setTitle("Có phiên bản mới")
             .setMessage(msg).setNegativeButton("Để sau",null)
             .setPositiveButton("Cập nhật",null).create();
@@ -405,7 +410,9 @@ public class MainActivity extends Activity {
         });
     }
     void deleteProduct(Product p){
-        new AlertDialog.Builder(this).setTitle("Xóa sản phẩm").setMessage("Bạn có chắc muốn xóa “"+p.name+"”?\n\nTồn kho hiện tại: "+p.stock+" "+p.unit+".")
+        new AlertDialog.Builder(this).setTitle("Xóa sản phẩm").setMessage("Bạn có chắc muốn xóa “"+p.name+"”?
+
+Tồn kho hiện tại: "+p.stock+" "+p.unit+".")
             .setNegativeButton("Hủy",null).setPositiveButton("Xóa",(d,w)->{products.remove(p);save();build("products");toast("Đã xóa sản phẩm");}).show();
     }
 
@@ -458,7 +465,8 @@ public class MainActivity extends Activity {
     long num(EditText e){try{return Long.parseLong(e.getText().toString().trim());}catch(Exception x){return 0;}}
     void dialog(String title,View v,Runnable save){AlertDialog d=new AlertDialog.Builder(this).setTitle(title).setView(v).setNegativeButton("Hủy",null).setPositiveButton("Lưu",null).create();d.setOnShowListener(x->d.getButton(-1).setOnClickListener(y->{save.run();d.dismiss();}));d.show();}
     void toast(String s){Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
-    static class Product{String code,name,category,unit;long price,stock,cost,minStock;Product(String c,String n,long p,long s){this(c,n,p,s,0,"Khác","cái",5);}Product(String c,String n,long p,long s,long co,String ca,String u,long m){code=c;name=n;price=p;stock=s;cost=co;category=ca;unit=u;minStock=m;}}\n    static class StockMove{String code,type,note,time;int qty;StockMove(String c,String t,int q,String n,String tm){code=c;type=t;qty=q;note=n;time=tm;}}
+    static class Product{String code,name,category,unit;long price,stock,cost,minStock;Product(String c,String n,long p,long s){this(c,n,p,s,0,"Khác","cái",5);}Product(String c,String n,long p,long s,long co,String ca,String u,long m){code=c;name=n;price=p;stock=s;cost=co;category=ca;unit=u;minStock=m;}}
+    static class StockMove{String code,type,note,time;int qty;StockMove(String c,String t,int q,String n,String tm){code=c;type=t;qty=q;note=n;time=tm;}}
     static class Sale{String customer,payment;long total;Sale(String c,long t,String p){customer=c;total=t;payment=p;}}
     static class Customer{String name,phone;Customer(String n,String p){name=n;phone=p;}}
 }
